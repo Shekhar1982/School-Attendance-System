@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>School QR Verification & Attendance</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #eef2f5; margin: 0; padding: 20px; }
+    .card { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
+    #result-box { margin-top: 15px; padding: 15px; border-radius: 8px; font-size: 1.1rem; text-align: left; display: none; }
+    .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    .warning { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+    .badge { display: inline-block; padding: 3px 8px; font-size: 0.85rem; border-radius: 4px; font-weight: bold; background: #6c757d; color: white; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>School Attendance Verification</h2>
+    <div id="reader"></div>
+    <div id="result-box"></div>
+  </div>
+
+  <script>
+    const GOOGLE_SCRIPT_URL = "YOUR_WEB_APP_URL_HERE";
+    let isProcessing = false;
+
+    function onScanSuccess(decodedText) {
+      if (isProcessing) return;
+      isProcessing = true;
+
+      const resultBox = document.getElementById("result-box");
+      resultBox.style.display = "block";
+      resultBox.className = "warning";
+      resultBox.innerHTML = `<strong>Scanning ID:</strong> ${decodedText}...`;
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrCode: decodedText })
+      })
+      .then(() => {
+        resultBox.className = "success";
+        resultBox.innerHTML = `
+          <strong>Entry Recorded!</strong><br>
+          <strong>ID:</strong> ${decodedText}<br>
+          <small>Check Google Sheet for full details</small>
+        `;
+        setTimeout(() => { isProcessing = false; }, 2500);
+      })
+      .catch(err => {
+        resultBox.className = "warning";
+        resultBox.innerText = "Error contacting server.";
+        setTimeout(() => { isProcessing = false; }, 2500);
+      });
+    }
+
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
+  </script>
+</body>
+</html>
